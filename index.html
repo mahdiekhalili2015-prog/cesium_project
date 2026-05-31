@@ -947,7 +947,7 @@
 
         console.log("AI RESPONSE:", data);
 
-        messages.innerHTML += `<p><b>AI:</b> ${data.answer}</p>`;
+        messages.innerHTML += `<p><b>AI:</b> ${data.answer || data.error || "No answer returned from server"}</p>`;
         messages.scrollTop = messages.scrollHeight;
 
         if (data.action && data.action !== "none") {
