@@ -1,0 +1,16 @@
+{
+	"version": "1.0.0",
+	"layername": "city_export",
+	"fileextension": ".kml",
+	"displayform": "collada",
+	"minLodPixels": 0,
+	"maxLodPixels": -1,
+	"colnum": 1,
+	"rownum": 1,
+	"bbox":{ 
+		"xmin": 9.095421323409962,
+		"xmax": 9.122640356099405,
+		"ymin": 48.734956923363086,
+		"ymax": 48.75255960358154
+	}
+}

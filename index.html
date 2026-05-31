@@ -1,0 +1,1124 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>2D WebGIS + 3D City Model + BIM - Field Data Integration</title>
+
+  <script src="https://cesium.com/downloads/cesiumjs/releases/1.120/Build/Cesium/Cesium.js"></script>
+  <link href="https://cesium.com/downloads/cesiumjs/releases/1.120/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <style>
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      font-family: Arial, sans-serif;
+      background: white;
+    }
+
+    #cesiumContainer, #leafletMap {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    #cesiumContainer {
+      display: block;
+      z-index: 1;
+    }
+
+    #leafletMap {
+      display: none;
+      z-index: 1;
+    }
+
+    #legend {
+      position: absolute;
+      left: 20px;
+      background: rgba(20, 25, 30, 0.90);
+      padding: 15px;
+      border-radius: 12px;
+      color: white;
+      z-index: 1000;
+      font-family: Arial;
+      box-shadow: 0 0 14px rgba(0,0,0,0.45);
+      backdrop-filter: blur(5px);
+    }
+    #legend {
+      bottom: 20px;
+    }
+
+    #legend h3 {
+      margin-top: 0;
+      margin-bottom: 10px;
+    }
+
+    #legend div {
+      margin: 6px 0;
+    }
+
+    #legend span {
+      display: inline-block;
+      width: 18px;
+      height: 18px;
+      margin-right: 10px;
+      border-radius: 4px;
+      vertical-align: middle;
+    }
+
+    .good { background: lime; }
+    .medium { background: yellow; }
+    .bad { background: red; }
+
+    #menuPanel {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      background: rgba(20, 25, 30, 0.92);
+      padding: 15px;
+      border-radius: 12px;
+      color: white;
+      z-index: 9999;
+      font-family: Arial;
+      min-width: 240px;
+      max-width: 290px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.55);
+      backdrop-filter: blur(5px);
+    }
+
+    #menuPanel h3, #menuPanel h4 {
+      margin-top: 0;
+      margin-bottom: 10px;
+    }
+
+    #menuPanel button {
+      width: 100%;
+      margin: 5px 0;
+      padding: 8px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      background: #2d89ef;
+      color: white;
+      font-weight: bold;
+    }
+
+    #menuPanel button:hover {
+      background: #1b5fa7;
+    }
+
+    #menuPanel label {
+      display: block;
+      margin: 8px 0;
+    }
+
+    .menuSection {
+      margin-top: 12px;
+      border-top: 1px solid gray;
+      padding-top: 10px;
+    }
+
+    #addressSearch, #usageFilter {
+      width: 100%;
+      padding: 7px;
+      border-radius: 6px;
+      border: none;
+      margin-bottom: 8px;
+      box-sizing: border-box;
+    }
+
+    .leaflet-popup-content img {
+      max-width: 260px;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+
+    #aiPanel {
+      position: absolute;
+      right: 20px;
+      bottom: 360px;
+      width: 330px;
+      background: rgba(20, 25, 30, 0.95);
+      color: white;
+      z-index: 10000;
+      padding: 15px;
+      border-radius: 12px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.55);
+      backdrop-filter: blur(5px);
+      display: none;
+    }
+
+    #aiPanel h3 {
+      margin-top: 0;
+      margin-bottom: 10px;
+    }
+
+    #aiMessages {
+      height: 190px;
+      overflow-y: auto;
+      background: rgba(255,255,255,0.08);
+      padding: 10px;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      font-size: 13px;
+      line-height: 1.4;
+    }
+
+    #aiInput {
+      width: 100%;
+      padding: 8px;
+      border-radius: 6px;
+      border: none;
+      box-sizing: border-box;
+      margin-bottom: 8px;
+    }
+
+    #aiSend {
+      width: 100%;
+      padding: 8px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      background: #2d89ef;
+      color: white;
+      font-weight: bold;
+    }
+
+    #aiSend:hover {
+      background: #1b5fa7;
+    }
+
+    .legendCount {
+      margin-top: 10px;
+      padding-top: 8px;
+      border-top: 1px solid rgba(255,255,255,0.35);
+      font-size: 13px;
+    }
+
+    .legendCount p {
+      margin: 5px 0;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="legend">
+    <h3>Building Condition</h3>
+    <div><span class="good"></span>Good: <b id="goodCount">0</b></div>
+    <div><span class="medium"></span>Medium: <b id="mediumCount">0</b></div>
+    <div><span class="bad"></span>Bad: <b id="badCount">0</b></div>
+
+    <div class="legendCount">
+      <p>Total observed buildings: <b id="totalCount">0</b></p>
+    </div>
+  </div>
+
+  <div id="cesiumContainer"></div>
+  <div id="leafletMap"></div>
+
+  <div id="menuPanel">
+    <h3>Menu</h3>
+
+    <button id="toggleLayerMenu">Layers</button>
+    <button id="toggleSearchMenu">Search</button>
+    <button id="toggleFilterMenu">Filter</button>
+    <button id="toggleAI">AI Assistant</button>
+    <button id="toggleViewMode">Switch to 2D WebGIS</button>
+
+    <div id="layersSection" class="menuSection" style="display:none;">
+      <h4>Layers</h4>
+
+      <label>
+        <input type="checkbox" id="toggleOSM" checked>
+        Base Map
+      </label>
+
+      <label>
+        <input type="checkbox" id="toggleBuildings" checked>
+        Observation Buildings
+      </label>
+
+      <label>
+        <input type="checkbox" id="toggleRealistic" checked>
+        Realistic 3D Model
+      </label>
+
+      <label>
+        <input type="checkbox" id="toggleBIM">
+        BIM Building
+      </label>
+    </div>
+
+    <div id="searchSection" class="menuSection" style="display:none;">
+      <h4>Search by Address</h4>
+      <input type="text" id="addressSearch" placeholder="Type address...">
+      <button id="searchButton">Search</button>
+    </div>
+
+    <div id="filterSection" class="menuSection" style="display:none;">
+      <h4>Filter by Usage</h4>
+      <select id="usageFilter">
+        <option value="all">All Buildings</option>
+      </select>
+    </div>
+  </div>
+
+  <div id="aiPanel">
+    <h3>AI Assistant</h3>
+    <div id="aiMessages">
+      <p><b>AI:</b> Hello! Ask me about buildings, conditions, BIM, or field observations.</p>
+    </div>
+    <input type="text" id="aiInput" placeholder="Ask about the project...">
+    <button id="aiSend">Send</button>
+  </div>
+
+  <script type="module">
+
+    Cesium.Ion.defaultAccessToken =
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI4YjViOGIzZC1mMWMwLTQ1ZDgtYmIxOC1mYWNmY2VhMzgzNmQiLCJpZCI6NDI5MjQzLCJpc3MiOiJodHRwczovL2lvbi5jZXNpdW0uY29tIiwiYXVkIjoidW5kZWZpbmVkX2RlZmF1bHQiLCJpYXQiOjE3NzgzMjM1NjB9.UOmG3Ym22LQ2tJk5KYTa3g8z87a0j7Y8rOXmZVa6POI";
+
+    let osmLayer;
+    let observationBuildingsLayer;
+    let realisticModelLayer;
+    let bimModelLayer;
+    let is3DMode = true;
+
+    let leafletMap;
+    let leafletBaseLayer;
+    let leafletBuildingsLayer;
+    let geojsonData;
+    let cesiumEntities = [];
+
+    const viewer = new Cesium.Viewer("cesiumContainer", {
+      terrainProvider: new Cesium.EllipsoidTerrainProvider(),
+      animation: false,
+      timeline: false,
+      geocoder: false,
+      baseLayerPicker: false,
+      infoBox: true,
+      selectionIndicator: true
+    });
+
+    viewer.imageryLayers.removeAll();
+
+    osmLayer = viewer.imageryLayers.addImageryProvider(
+      new Cesium.OpenStreetMapImageryProvider({
+        url: "https://a.tile.openstreetmap.org/"
+      })
+    );
+
+    viewer.scene.skyBox.show = false;
+    viewer.scene.backgroundColor = Cesium.Color.WHITE;
+    viewer.scene.sun.show = true;
+    viewer.scene.moon.show = true;
+    viewer.shadows = true;
+    viewer.scene.globe.enableLighting = true;
+    viewer.scene.globe.depthTestAgainstTerrain = false;
+
+    try {
+      const realisticModel = await Cesium.createGooglePhotorealistic3DTileset();
+      viewer.scene.primitives.add(realisticModel);
+      realisticModelLayer = realisticModel;
+      console.log("Google Photorealistic 3D Tiles loaded");
+    } catch (error) {
+      console.error("Google Photorealistic 3D Tiles error:", error);
+    }
+
+    try {
+      const bimModel = await Cesium.Cesium3DTileset.fromIonAssetId(4856693);
+      viewer.scene.primitives.add(bimModel);
+      bimModelLayer = bimModel;
+      bimModelLayer.show = false;
+      console.log("BIM Building loaded");
+    } catch (error) {
+      console.error("BIM Building error:", error);
+    }
+
+    leafletMap = L.map("leafletMap", {
+      zoomControl: true
+    }).setView([48.744, 9.106], 17);
+
+    leafletBaseLayer = L.tileLayer(
+      "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+      {
+        maxZoom: 22,
+        attribution: "&copy; OpenStreetMap contributors"
+      }
+    ).addTo(leafletMap);
+
+    function getConditionColor(condition) {
+      if (condition === "Good") return "lime";
+      if (condition === "Medium") return "yellow";
+      if (condition === "Bad") return "red";
+      return "gray";
+    }
+
+    function getCesiumColor(condition) {
+      if (condition === "Good") return Cesium.Color.LIME.withAlpha(0.55);
+      if (condition === "Medium") return Cesium.Color.YELLOW.withAlpha(0.55);
+      if (condition === "Bad") return Cesium.Color.RED.withAlpha(0.65);
+      return Cesium.Color.GRAY.withAlpha(0.45);
+    }
+
+    function getPopupHtml(properties) {
+      const photoPath = properties.photo ?? "";
+
+      const address =
+        properties.lagebeztxt
+        || properties.address
+        || properties.addr_full
+        || properties.street
+        || "Address not available";
+
+      return `
+        <div style="font-family: Arial; max-width: 300px;">
+          ${
+            photoPath
+              ? `
+              <a href="${photoPath}" target="_blank">
+                <img
+                  src="${photoPath}"
+                  width="260"
+                  style="
+                    border-radius:10px;
+                    margin-bottom:10px;
+                    cursor:pointer;
+                    box-shadow:0 0 8px rgba(0,0,0,0.4);
+                  "
+                />
+              </a>
+              <p style="font-size:12px; color:gray;">
+                Click the photo to open it
+              </p>
+              `
+              : `<p><b>Photo:</b> No photo available</p>`
+          }
+
+          <h2>Building Information</h2>
+          <p><b>Condition:</b> ${properties.condition ?? "N/A"}</p>
+          <p><b>Notes:</b> ${properties.notes ?? "N/A"}</p>
+          <p><b>Function:</b> ${properties.funktion ?? "N/A"}</p>
+          <p><b>Address:</b> ${address}</p>
+          <p><b>Building ID:</b> ${properties.building_id ?? "N/A"}</p>
+        </div>
+      `;
+    }
+
+    function getCesiumProperty(entity, fieldName) {
+      return entity.properties?.[fieldName]?.getValue?.() ?? null;
+    }
+
+    function getBimFeatureHtml(feature) {
+      let rows = "";
+
+      try {
+        if (feature && typeof feature.getPropertyNames === "function") {
+          const names = feature.getPropertyNames();
+
+          names.forEach(function(name) {
+            const value = feature.getProperty(name);
+
+            if (
+              value !== undefined &&
+              value !== null &&
+              String(value).trim() !== ""
+            ) {
+              rows += `
+                <p><b>${name}:</b> ${value}</p>
+              `;
+            }
+          });
+        }
+      } catch (error) {
+        console.warn("BIM property read error:", error);
+      }
+
+      if (!rows) {
+        rows = `
+          <p><b>Layer:</b> BIM Building</p>
+          <p><b>Description:</b> This is the integrated BIM model used to demonstrate BIM-GIS integration inside the 3D city model.</p>
+          <p><b>Use:</b> Supports detailed building inspection, digital twin visualization, and comparison with the surrounding city context.</p>
+        `;
+      }
+
+      return `
+        <div style="font-family: Arial; max-width: 320px;">
+          <h2>BIM Building Information</h2>
+          ${rows}
+        </div>
+      `;
+    }
+
+    function showBimInformation(pickedObject) {
+      const feature = pickedObject;
+      const bimEntity = new Cesium.Entity({
+        name: "BIM Building",
+        description: getBimFeatureHtml(feature)
+      });
+
+      viewer.selectedEntity = bimEntity;
+    }
+
+
+    fetch("data/buildings_web.geojson")
+      .then(response => response.json())
+      .then(function(data) {
+
+        geojsonData = data;
+
+        leafletBuildingsLayer = L.geoJSON(data, {
+          style: function(feature) {
+            const condition = feature.properties.condition;
+
+            return {
+              color: "#222222",
+              weight: 1,
+              fillColor: getConditionColor(condition),
+              fillOpacity: 0.60
+            };
+          },
+
+          onEachFeature: function(feature, layer) {
+            layer.bindPopup(getPopupHtml(feature.properties));
+          }
+        }).addTo(leafletMap);
+
+        leafletMap.fitBounds(leafletBuildingsLayer.getBounds());
+
+        Cesium.GeoJsonDataSource.load(data, {
+          clampToGround: true
+        })
+        .then(function(dataSource) {
+
+          viewer.dataSources.add(dataSource);
+          observationBuildingsLayer = dataSource;
+          cesiumEntities = dataSource.entities.values;
+
+          const usageSet = new Set();
+
+          let goodCount = 0;
+          let mediumCount = 0;
+          let badCount = 0;
+
+          for (const e of cesiumEntities) {
+
+            e.name = `Building ${getCesiumProperty(e, "building_id") ?? ""}`;
+
+            if (!e.polygon) continue;
+
+            const condition = getCesiumProperty(e, "condition");
+            const usage = getCesiumProperty(e, "funktion") ?? "Unknown";
+
+            usageSet.add(usage);
+
+            if (condition === "Good") goodCount++;
+            else if (condition === "Medium") mediumCount++;
+            else if (condition === "Bad") badCount++;
+            else {
+              e.show = false;
+              continue;
+            }
+
+            const color = getCesiumColor(condition);
+
+            e.polygon.material = color;
+            e.polygon.classificationType = Cesium.ClassificationType.CESIUM_3D_TILE;
+            e.polygon.outline = true;
+            e.polygon.outlineColor = Cesium.Color.WHITE.withAlpha(0.95);
+            e.polygon.height = undefined;
+            e.polygon.extrudedHeight = undefined;
+            e.originalColor = color;
+
+            const propertiesForPopup = {
+              photo: getCesiumProperty(e, "photo"),
+              condition: getCesiumProperty(e, "condition"),
+              notes: getCesiumProperty(e, "notes"),
+              funktion: getCesiumProperty(e, "funktion"),
+              lagebeztxt: getCesiumProperty(e, "lagebeztxt"),
+              address: getCesiumProperty(e, "address"),
+              addr_full: getCesiumProperty(e, "addr_full"),
+              street: getCesiumProperty(e, "street"),
+              building_id: getCesiumProperty(e, "building_id")
+            };
+
+            e.description = getPopupHtml(propertiesForPopup);
+          }
+
+          document.getElementById("goodCount").innerText = goodCount;
+          document.getElementById("mediumCount").innerText = mediumCount;
+          document.getElementById("badCount").innerText = badCount;
+          document.getElementById("totalCount").innerText =
+            goodCount + mediumCount + badCount;
+
+          const usageFilter = document.getElementById("usageFilter");
+
+          usageSet.forEach(function(usage) {
+            const option = document.createElement("option");
+            option.value = usage;
+            option.textContent = usage;
+            usageFilter.appendChild(option);
+          });
+
+          const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
+          let highlighted;
+
+          handler.setInputAction(function(movement) {
+
+            if (highlighted && highlighted.polygon) {
+              highlighted.polygon.material = highlighted.originalColor;
+              highlighted = undefined;
+            }
+
+            const pickedObject = viewer.scene.pick(movement.endPosition);
+
+            if (
+              Cesium.defined(pickedObject) &&
+              pickedObject.id &&
+              pickedObject.id.polygon
+            ) {
+              highlighted = pickedObject.id;
+              highlighted.polygon.material = Cesium.Color.CYAN.withAlpha(0.75);
+            }
+
+          }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
+
+          const clickHandler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
+
+          clickHandler.setInputAction(function(click) {
+            const pickedObject = viewer.scene.pick(click.position);
+
+            if (
+              Cesium.defined(pickedObject) &&
+              pickedObject.id &&
+              pickedObject.id.polygon
+            ) {
+              viewer.selectedEntity = pickedObject.id;
+              return;
+            }
+
+            if (
+              Cesium.defined(pickedObject) &&
+              bimModelLayer &&
+              (
+                pickedObject.tileset === bimModelLayer ||
+                pickedObject.primitive === bimModelLayer ||
+                pickedObject.content
+              )
+            ) {
+              showBimInformation(pickedObject);
+            }
+          }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+
+          viewer.camera.flyTo({
+            destination: Cesium.Cartesian3.fromDegrees(9.106, 48.744, 850),
+            orientation: {
+              heading: Cesium.Math.toRadians(20),
+              pitch: Cesium.Math.toRadians(-35),
+              roll: 0
+            }
+          });
+
+          document.getElementById("searchButton").addEventListener(
+            "click",
+            function () {
+
+              const searchText = document
+                .getElementById("addressSearch")
+                .value
+                .trim()
+                .toLowerCase();
+
+              if (!searchText) {
+                alert("Please type an address first");
+                return;
+              }
+
+              if (is3DMode) {
+                for (const e of cesiumEntities) {
+                  const address =
+                    getCesiumProperty(e, "lagebeztxt")?.toLowerCase() ?? "";
+
+                  if (address.includes(searchText)) {
+                    viewer.flyTo(e);
+                    viewer.selectedEntity = e;
+                    return;
+                  }
+                }
+              }
+
+              else {
+                let found = false;
+
+                leafletBuildingsLayer.eachLayer(function(layer) {
+                  const address =
+                    layer.feature.properties.lagebeztxt?.toLowerCase() ?? "";
+
+                  if (!found && address.includes(searchText)) {
+                    leafletMap.fitBounds(layer.getBounds(), {
+                      maxZoom: 19
+                    });
+                    layer.openPopup();
+                    found = true;
+                  }
+                });
+
+                if (found) return;
+              }
+
+              alert("Address not found");
+            }
+          );
+
+          document.getElementById("usageFilter").addEventListener(
+            "change",
+            function () {
+
+              const selectedUsage = this.value;
+
+              for (const e of cesiumEntities) {
+                const usage = getCesiumProperty(e, "funktion") ?? "Unknown";
+                e.show = selectedUsage === "all" || usage === selectedUsage;
+              }
+
+              if (leafletBuildingsLayer) {
+                leafletBuildingsLayer.eachLayer(function(layer) {
+                  const usage = layer.feature.properties.funktion ?? "Unknown";
+
+                  if (selectedUsage === "all" || usage === selectedUsage) {
+                    layer.addTo(leafletMap);
+                  } else {
+                    leafletMap.removeLayer(layer);
+                  }
+                });
+              }
+            }
+          );
+
+        })
+        .catch(function(error) {
+          console.error("Cesium GeoJSON load error:", error);
+        });
+      })
+      .catch(function(error) {
+        console.error("GeoJSON fetch error:", error);
+      });
+
+    document.getElementById("toggleOSM").addEventListener(
+      "change",
+      function () {
+        if (osmLayer) osmLayer.show = this.checked;
+
+        if (leafletBaseLayer) {
+          if (this.checked) leafletBaseLayer.addTo(leafletMap);
+          else leafletMap.removeLayer(leafletBaseLayer);
+        }
+      }
+    );
+
+    document.getElementById("toggleBuildings").addEventListener(
+      "change",
+      function () {
+        if (observationBuildingsLayer) {
+          observationBuildingsLayer.show = this.checked;
+        }
+
+        if (leafletBuildingsLayer) {
+          if (this.checked) leafletBuildingsLayer.addTo(leafletMap);
+          else leafletMap.removeLayer(leafletBuildingsLayer);
+        }
+      }
+    );
+
+    document.getElementById("toggleRealistic").addEventListener(
+      "change",
+      function () {
+        if (realisticModelLayer) {
+          realisticModelLayer.show = this.checked;
+        }
+      }
+    );
+
+    document.getElementById("toggleBIM").addEventListener(
+      "change",
+      function () {
+        if (bimModelLayer) {
+          bimModelLayer.show = this.checked;
+        }
+      }
+    );
+
+    function toggleSection(sectionId) {
+      const section = document.getElementById(sectionId);
+
+      if (section.style.display === "none" || section.style.display === "") {
+        section.style.display = "block";
+      } else {
+        section.style.display = "none";
+      }
+    }
+
+    document.getElementById("toggleLayerMenu").addEventListener(
+      "click",
+      function () {
+        toggleSection("layersSection");
+      }
+    );
+
+    document.getElementById("toggleSearchMenu").addEventListener(
+      "click",
+      function () {
+        toggleSection("searchSection");
+      }
+    );
+
+    document.getElementById("toggleFilterMenu").addEventListener(
+      "click",
+      function () {
+        toggleSection("filterSection");
+      }
+    );
+
+    document.getElementById("toggleViewMode").addEventListener(
+      "click",
+      function () {
+
+        const cesiumDiv = document.getElementById("cesiumContainer");
+        const leafletDiv = document.getElementById("leafletMap");
+
+        if (is3DMode) {
+          cesiumDiv.style.display = "none";
+          leafletDiv.style.display = "block";
+
+          this.innerText = "Switch to 3D City Model";
+          is3DMode = false;
+
+          setTimeout(function() {
+            leafletMap.invalidateSize();
+
+            if (leafletBuildingsLayer) {
+              leafletMap.fitBounds(leafletBuildingsLayer.getBounds());
+            }
+          }, 300);
+        }
+
+        else {
+          leafletDiv.style.display = "none";
+          cesiumDiv.style.display = "block";
+
+          this.innerText = "Switch to 2D WebGIS";
+          is3DMode = true;
+        }
+      }
+    );
+
+    document.getElementById("toggleAI").addEventListener("click", function () {
+      const aiPanel = document.getElementById("aiPanel");
+
+      aiPanel.style.display =
+        aiPanel.style.display === "none" || aiPanel.style.display === ""
+          ? "block"
+          : "none";
+    });
+
+    document.getElementById("aiSend").addEventListener("click", sendAIQuestion);
+
+    document.getElementById("aiInput").addEventListener("keydown", function(event) {
+      if (event.key === "Enter") {
+        sendAIQuestion();
+      }
+    });
+
+    let aiMarkers = [];
+
+    function clearAIMarkers() {
+      aiMarkers.forEach(function(marker) {
+        if (marker.cesiumEntity) {
+          viewer.entities.remove(marker.cesiumEntity);
+        }
+
+        if (marker.leafletMarker && leafletMap) {
+          leafletMap.removeLayer(marker.leafletMarker);
+        }
+      });
+
+      aiMarkers = [];
+    }
+
+    function addAIMarkersFromPayload(mapPayload) {
+      clearAIMarkers();
+
+      if (!mapPayload || !Array.isArray(mapPayload.items)) {
+        return;
+      }
+
+      const markerItems = mapPayload.items.filter(function(item) {
+        return item.lat && item.lon;
+      });
+
+      markerItems.forEach(function(item) {
+        const name = item.name || item.category || "AI Map Result";
+        const lat = Number(item.lat);
+        const lon = Number(item.lon);
+
+        const cesiumEntity = viewer.entities.add({
+          name: name,
+          position: Cesium.Cartesian3.fromDegrees(lon, lat, 40),
+          billboard: {
+            image: "https://cdn-icons-png.flaticon.com/512/684/684908.png",
+            width: 38,
+            height: 38,
+            verticalOrigin: Cesium.VerticalOrigin.BOTTOM
+          },
+          label: {
+            text: name,
+            font: "14px Arial",
+            fillColor: Cesium.Color.WHITE,
+            outlineColor: Cesium.Color.BLACK,
+            outlineWidth: 3,
+            style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+            pixelOffset: new Cesium.Cartesian2(0, -44)
+          },
+          description: `
+            <div style="font-family: Arial;">
+              <h2>${name}</h2>
+              <p><b>Type:</b> ${item.amenity || item.shop || item.public_transport || item.highway || mapPayload.category || "Map feature"}</p>
+              <p><b>Latitude:</b> ${lat}</p>
+              <p><b>Longitude:</b> ${lon}</p>
+            </div>
+          `
+        });
+
+        const leafletMarker = L.marker([lat, lon])
+          .addTo(leafletMap)
+          .bindPopup(`<b>${name}</b>`);
+
+        aiMarkers.push({
+          cesiumEntity,
+          leafletMarker
+        });
+      });
+
+      if (aiMarkers.length > 0) {
+        if (is3DMode) {
+          viewer.flyTo(aiMarkers.map(function(marker) {
+            return marker.cesiumEntity;
+          }));
+        } else {
+          const group = L.featureGroup(aiMarkers.map(function(marker) {
+            return marker.leafletMarker;
+          }));
+
+          leafletMap.fitBounds(group.getBounds(), {
+            padding: [30, 30]
+          });
+        }
+      }
+    }
+
+    async function sendAIQuestion() {
+      const input = document.getElementById("aiInput");
+      const messages = document.getElementById("aiMessages");
+      const question = input.value.trim();
+
+      if (!question) return;
+
+      messages.innerHTML += `<p><b>You:</b> ${question}</p>`;
+      input.value = "";
+
+      try {
+        const response = await fetch("http://localhost:3000/ask", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            question: question,
+            history: messages.innerText
+          })
+        });
+
+        const data = await response.json();
+
+        console.log("AI RESPONSE:", data);
+
+        messages.innerHTML += `<p><b>AI:</b> ${data.answer}</p>`;
+        messages.scrollTop = messages.scrollHeight;
+
+        if (data.action && data.action !== "none") {
+          runAIMapAction(data.action, data.mapPayload);
+        }
+
+      } catch (error) {
+        messages.innerHTML += `
+          <p style="color:red;">
+            <b>Error:</b> Cannot connect to AI server. Start it with: node server.js
+          </p>
+        `;
+      }
+    }
+
+    function runAIMapAction(action, mapPayload) {
+      console.log("RUNNING MAP ACTION:", action, mapPayload);
+
+      switch (action) {
+        case "turn_on_bim":
+          if (bimModelLayer) bimModelLayer.show = true;
+          document.getElementById("toggleBIM").checked = true;
+          break;
+
+        case "turn_off_bim":
+          if (bimModelLayer) bimModelLayer.show = false;
+          document.getElementById("toggleBIM").checked = false;
+          break;
+
+        case "turn_on_realistic":
+          if (realisticModelLayer) realisticModelLayer.show = true;
+          document.getElementById("toggleRealistic").checked = true;
+          break;
+
+        case "turn_off_realistic":
+          if (realisticModelLayer) realisticModelLayer.show = false;
+          document.getElementById("toggleRealistic").checked = false;
+          break;
+
+        case "filter_bad_buildings":
+          filterBuildingsByCondition("Bad");
+          break;
+
+        case "filter_medium_buildings":
+          filterBuildingsByCondition("Medium");
+          break;
+
+        case "filter_good_buildings":
+          filterBuildingsByCondition("Good");
+          break;
+
+        case "show_all_buildings":
+          showAllBuildings();
+          break;
+
+        case "switch_to_2d":
+          if (is3DMode) {
+            document.getElementById("toggleViewMode").click();
+          }
+          break;
+
+        case "switch_to_3d":
+          if (!is3DMode) {
+            document.getElementById("toggleViewMode").click();
+          }
+          break;
+
+        case "show_restaurants":
+        case "show_bus_stops":
+        case "show_student_housing":
+          addAIMarkersFromPayload(mapPayload);
+          break;
+
+        case "show_research_institutes":
+          highlightBuildingsByFunction("Forschungsinstitut");
+          break;
+
+        default:
+          if (action && action.startsWith("zoom_building_")) {
+            const buildingId = action.replace("zoom_building_", "");
+            zoomToBuildingById(buildingId);
+          }
+          break;
+      }
+    }
+
+    function filterBuildingsByCondition(conditionValue) {
+      for (const e of cesiumEntities) {
+        const condition = getCesiumProperty(e, "condition");
+        e.show = condition === conditionValue;
+      }
+
+      if (leafletBuildingsLayer) {
+        leafletBuildingsLayer.eachLayer(function(layer) {
+          const condition = layer.feature.properties.condition;
+
+          if (condition === conditionValue) {
+            layer.addTo(leafletMap);
+          } else {
+            leafletMap.removeLayer(layer);
+          }
+        });
+      }
+
+      const selectedBuildings = cesiumEntities.filter(e =>
+        getCesiumProperty(e, "condition") === conditionValue
+      );
+
+      if (selectedBuildings.length > 0 && is3DMode) {
+        viewer.flyTo(selectedBuildings);
+      }
+    }
+
+    function highlightBuildingsByFunction(functionValue) {
+      const selectedBuildings = [];
+
+      for (const e of cesiumEntities) {
+        const usage = getCesiumProperty(e, "funktion") ?? "Unknown";
+        e.show = usage === functionValue;
+
+        if (usage === functionValue) {
+          selectedBuildings.push(e);
+        }
+      }
+
+      if (leafletBuildingsLayer) {
+        leafletBuildingsLayer.eachLayer(function(layer) {
+          const usage = layer.feature.properties.funktion ?? "Unknown";
+
+          if (usage === functionValue) {
+            layer.addTo(leafletMap);
+          } else {
+            leafletMap.removeLayer(layer);
+          }
+        });
+      }
+
+      if (selectedBuildings.length > 0 && is3DMode) {
+        viewer.flyTo(selectedBuildings);
+      }
+    }
+
+    function zoomToBuildingById(buildingId) {
+      const selectedBuilding = cesiumEntities.find(e =>
+        String(getCesiumProperty(e, "building_id")) === String(buildingId)
+      );
+
+      if (selectedBuilding) {
+        selectedBuilding.show = true;
+        viewer.flyTo(selectedBuilding);
+        viewer.selectedEntity = selectedBuilding;
+      }
+    }
+
+    function showAllBuildings() {
+      for (const e of cesiumEntities) {
+        e.show = true;
+      }
+
+      if (leafletBuildingsLayer) {
+        leafletBuildingsLayer.eachLayer(function(layer) {
+          layer.addTo(leafletMap);
+        });
+      }
+
+      if (cesiumEntities.length > 0 && is3DMode) {
+        viewer.flyTo(cesiumEntities);
+      }
+    }
+
+  </script>
+
+</body>
+</html>
