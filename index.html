@@ -228,8 +228,9 @@
     <button id="toggleLayerMenu">Layers</button>
     <button id="toggleSearchMenu">Search</button>
     <button id="toggleFilterMenu">Filter</button>
-    <button id="toggleAI">AI Assistant</button>
-    <button id="toggleViewMode">Switch to 2D WebGIS</button>
+ <button id="toggleAI">AI Assistant</button>
+<button id="openPointCloud">Point Cloud Viewer</button>
+<button id="toggleViewMode">Switch to 2D WebGIS</button>
 
     <div id="layersSection" class="menuSection" style="display:none;">
       <h4>Layers</h4>
@@ -1117,7 +1118,15 @@
         viewer.flyTo(cesiumEntities);
       }
     }
-
+document.getElementById("openPointCloud").addEventListener(
+  "click",
+  function () {
+    window.open(
+      "https://urbanvis.hft-stuttgart.de/Testgebiete.html",
+      "_blank"
+    );
+  }
+);
   </script>
 
 </body>
