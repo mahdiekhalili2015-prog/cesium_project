@@ -269,36 +269,6 @@
       </select>
     </div>
   </div>
-<div id="pointCloudContainer" style="
-display:none;
-position:absolute;
-top:0;
-left:0;
-width:100%;
-height:100%;
-z-index:5000;
-background:white;
-">
-
-<button id="closePointCloud" style="
-position:absolute;
-top:10px;
-right:10px;
-z-index:6000;
-padding:10px;
-">
-Close Point Cloud
-</button>
-
-<iframe
-id="pointCloudFrame"
-src="https://urbanvis.hft-stuttgart.de/Testgebiete.html"
-width="100%"
-height="100%"
-frameborder="0">
-</iframe>
-
-</div>
   <div id="aiPanel">
     <h3>AI Assistant</h3>
     <div id="aiMessages">
@@ -1147,7 +1117,15 @@ frameborder="0">
         viewer.flyTo(cesiumEntities);
       }
     }
-
+document.getElementById("openPointCloud").addEventListener(
+  "click",
+  function () {
+    window.open(
+      "https://urbanvis.hft-stuttgart.de/Testgebiete.html",
+      "_blank"
+    );
+  }
+);
   </script>
 
 </body>
