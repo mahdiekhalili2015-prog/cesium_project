@@ -1121,10 +1121,23 @@
 document.getElementById("openPointCloud").addEventListener(
   "click",
   function () {
-    window.open(
-      "https://urbanvis.hft-stuttgart.de/Testgebiete.html",
-      "_blank"
-    );
+   <div id="pointCloudContainer" style="
+display:none;
+position:absolute;
+top:0;
+left:0;
+width:100%;
+height:100%;
+z-index:5000;
+background:white;
+">
+  <iframe
+    src="https://urbanvis.hft-stuttgart.de/Testgebiete.html"
+    width="100%"
+    height="100%"
+    frameborder="0">
+  </iframe>
+</div>
   }
 );
   </script>
