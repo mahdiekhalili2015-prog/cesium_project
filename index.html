@@ -457,7 +457,7 @@
         <img
   src="${photoPath}"
   width="260"
-  onclick="parent.postMessage({type:'openPhotoViewer', photoPath:'${photoPath}'}, '*')"
+  class="popup-photo" data-photo="${photoPath}"
   style="
     border-radius:10px;
     margin-bottom:10px;
@@ -1345,10 +1345,31 @@ document.getElementById("photoViewer").addEventListener(
     updatePhotoTransform();
   }
 );
-    window.addEventListener("message", function(event) {
-  if (event.data && event.data.type === "openPhotoViewer") {
-    openPhotoViewer(event.data.photoPath);
-  }
+function activateCesiumPopupPhotoClick() {
+  setTimeout(function () {
+    const iframe = document.querySelector(".cesium-infoBox-iframe");
+
+    if (!iframe || !iframe.contentDocument) return;
+
+    const photos =
+      iframe.contentDocument.querySelectorAll(".popup-photo");
+
+    photos.forEach(function(photo) {
+      photo.addEventListener("click", function(event) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        const photoPath =
+          photo.getAttribute("data-photo") || photo.src;
+
+        window.openPhotoViewer(photoPath);
+      });
+    });
+  }, 500);
+}
+
+viewer.selectedEntityChanged.addEventListener(function() {
+  activateCesiumPopupPhotoClick();
 });
   </script>
 
