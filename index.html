@@ -1348,33 +1348,15 @@ document.getElementById("photoViewer").addEventListener(
     updatePhotoTransform();
   }
 );
-function activateCesiumPopupPhotoClick() {
-  setTimeout(function () {
-    const iframe = document.querySelector(".cesium-infoBox-iframe");
+function openPopupPhoto(photo) {
+  const photoPath =
+    photo.getAttribute("data-photo") || photo.src;
 
-    if (!iframe || !iframe.contentDocument) return;
-
-    const photos =
-      iframe.contentDocument.querySelectorAll(".popup-photo");
-
-    photos.forEach(function(photo) {
-      photo.addEventListener("click", function(event) {
-        event.preventDefault();
-        event.stopPropagation();
-
-        const photoPath =
-          photo.getAttribute("data-photo") || photo.src;
-
-        window.openPhotoViewer(photoPath);
-      });
-    });
-  }, 500);
+  window.openPhotoViewer(photoPath);
 }
 
-viewer.selectedEntityChanged.addEventListener(function() {
-  activateCesiumPopupPhotoClick();
-});
-    document.addEventListener("click", function(event) {
+document.addEventListener("click", function(event) {
+
   const photo = event.target.closest(".popup-photo");
 
   if (!photo) return;
@@ -1382,10 +1364,57 @@ viewer.selectedEntityChanged.addEventListener(function() {
   event.preventDefault();
   event.stopPropagation();
 
-  const photoPath =
-    photo.getAttribute("data-photo") || photo.src;
+  openPopupPhoto(photo);
 
-  window.openPhotoViewer(photoPath);
+});
+
+function activateCesiumPopupPhotoClick() {
+
+  let attempts = 0;
+
+  const timer = setInterval(function () {
+
+    attempts++;
+
+    const iframe =
+      document.querySelector(".cesium-infoBox-iframe");
+
+    if (iframe && iframe.contentDocument) {
+
+      const photos =
+        iframe.contentDocument.querySelectorAll(".popup-photo");
+
+      photos.forEach(function(photo) {
+
+        photo.style.cursor = "pointer";
+
+        photo.onclick = function(event) {
+
+          event.preventDefault();
+          event.stopPropagation();
+
+          const photoPath =
+            photo.getAttribute("data-photo") || photo.src;
+
+          window.openPhotoViewer(photoPath);
+        };
+
+      });
+
+      if (photos.length > 0) {
+        clearInterval(timer);
+      }
+    }
+
+    if (attempts > 20) {
+      clearInterval(timer);
+    }
+
+  }, 300);
+}
+
+viewer.selectedEntityChanged.addEventListener(function() {
+  activateCesiumPopupPhotoClick();
 });
   </script>
 
