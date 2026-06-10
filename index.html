@@ -343,14 +343,14 @@
     </div>
     <input type="text" id="aiInput" placeholder="Ask about the project...">
     <button id="aiSend">Send</button>
-    <div id="photoViewer" style="display:none;">
+    
+  </div>
+<div id="photoViewer" style="display:none;">
   <button id="closePhotoViewer">×</button>
   <button id="zoomInPhoto">+</button>
   <button id="zoomOutPhoto">−</button>
   <img id="largePhoto" src="">
 </div>
-  </div>
-
   <script type="module">
 
     Cesium.Ion.defaultAccessToken =
@@ -454,7 +454,7 @@
           ${
             photoPath
               ? `
-              <a href="#" onclick="openPhotoViewer('${photoPath}'); return false;">
+              <a href="#" onclick="window.parent.openPhotoViewer('${photoPath}'); return false;">
                 <img
                   src="${photoPath}"
                   width="260"
