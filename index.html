@@ -415,46 +415,68 @@
       return entity.properties?.[fieldName]?.getValue?.() ?? null;
     }
 
-    function getBimFeatureHtml(feature) {
-      let rows = "";
+function getBimFeatureHtml(feature) {
+  let rows = "";
 
-      try {
-        if (feature && typeof feature.getPropertyNames === "function") {
-          const names = feature.getPropertyNames();
+  rows += `
+    <h3>Building Information</h3>
+    <p><b>Layer:</b> BIM Building</p>
+    <p><b>Model type:</b> BIM / IFC-based 3D model</p>
+    <p><b>Purpose:</b> BIM-GIS integration inside the 3D city model.</p>
 
-          names.forEach(function(name) {
-            const value = feature.getProperty(name);
+    <h3>Building Geometry</h3>
+    <p>3D shape, height, volume, floor levels, and spatial structure of the building.</p>
 
-            if (
-              value !== undefined &&
-              value !== null &&
-              String(value).trim() !== ""
-            ) {
-              rows += `
-                <p><b>${name}:</b> ${value}</p>
-              `;
-            }
-          });
-        }
-      } catch (error) {
-        console.warn("BIM property read error:", error);
+    <h3>Walls</h3>
+    <p>Wall elements represent the vertical structural and non-structural parts of the building.</p>
+
+    <h3>Floors / Slabs</h3>
+    <p>Floor slabs and storeys show the internal vertical organization of the building.</p>
+
+    <h3>Windows / Doors</h3>
+    <p>Windows and doors represent openings and facade elements in the BIM model.</p>
+
+    <h3>Materials</h3>
+    <p>The BIM model can contain material information such as concrete, glass, steel, or masonry.</p>
+
+    <h3>Rooms / Spaces</h3>
+    <p>Rooms and spaces describe the internal functional areas of the building, if available in the BIM export.</p>
+
+    <h3>Technical Components</h3>
+    <p>Technical components may include HVAC, pipes, ducts, electrical, or mechanical systems.</p>
+  `;
+
+  try {
+    if (feature && typeof feature.getPropertyNames === "function") {
+      const names = feature.getPropertyNames();
+
+      if (names.length > 0) {
+        rows += `<h3>Available BIM Attributes from Model</h3>`;
+
+        names.forEach(function(name) {
+          const value = feature.getProperty(name);
+
+          if (
+            value !== undefined &&
+            value !== null &&
+            String(value).trim() !== ""
+          ) {
+            rows += `<p><b>${name}:</b> ${value}</p>`;
+          }
+        });
       }
-
-      if (!rows) {
-        rows = `
-          <p><b>Layer:</b> BIM Building</p>
-          <p><b>Description:</b> This is the integrated BIM model used to demonstrate BIM-GIS integration inside the 3D city model.</p>
-          <p><b>Use:</b> Supports detailed building inspection, digital twin visualization, and comparison with the surrounding city context.</p>
-        `;
-      }
-
-      return `
-        <div style="font-family: Arial; max-width: 320px;">
-          <h2>BIM Building Information</h2>
-          ${rows}
-        </div>
-      `;
     }
+  } catch (error) {
+    console.warn("BIM property read error:", error);
+  }
+
+  return `
+    <div style="font-family: Arial; max-width: 360px;">
+      <h2>BIM Building Information</h2>
+      ${rows}
+    </div>
+  `;
+}
 
     function showBimInformation(pickedObject) {
       const feature = pickedObject;
