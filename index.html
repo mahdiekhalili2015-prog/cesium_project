@@ -204,6 +204,68 @@
     .legendCount p {
       margin: 5px 0;
     }
+    #photoViewer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.9);
+  z-index: 20000;
+  overflow: hidden;
+}
+
+#largePhoto {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  max-width: none;
+  max-height: none;
+  transform: translate(-50%, -50%) scale(1);
+  cursor: grab;
+}
+
+#closePhotoViewer {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  z-index: 20001;
+  font-size: 30px;
+  background: red;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 5px 15px;
+  cursor: pointer;
+}
+
+#zoomInPhoto {
+  position: absolute;
+  top: 80px;
+  right: 20px;
+  z-index: 20001;
+  font-size: 24px;
+  background: #2d89ef;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 5px 15px;
+  cursor: pointer;
+}
+
+#zoomOutPhoto {
+  position: absolute;
+  top: 130px;
+  right: 20px;
+  z-index: 20001;
+  font-size: 24px;
+  background: #2d89ef;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 5px 15px;
+  cursor: pointer;
+}
   </style>
 </head>
 
@@ -223,14 +285,18 @@
   <div id="leafletMap"></div>
 
   <div id="menuPanel">
-    <h3>Menu</h3>
+<h3>Menu</h3>
 
-    <button id="toggleLayerMenu">Layers</button>
-    <button id="toggleSearchMenu">Search</button>
-    <button id="toggleFilterMenu">Filter</button>
- <button id="toggleAI">AI Assistant</button>
-<button id="openPointCloud">Point Cloud Viewer</button>
-<button id="toggleViewMode">Switch to 2D WebGIS</button>
+<button id="mainMenuButton">☰ Open Menu</button>
+
+<div id="mainMenuContent" style="display:none;">
+  <button id="toggleLayerMenu">Layers</button>
+  <button id="toggleSearchMenu">Search</button>
+  <button id="toggleFilterMenu">Filter</button>
+  <button id="toggleAI">AI Assistant</button>
+  <button id="openPointCloud">Point Cloud Viewer</button>
+  <button id="toggleViewMode">Switch to 2D WebGIS</button>
+</div>
 
     <div id="layersSection" class="menuSection" style="display:none;">
       <h4>Layers</h4>
@@ -277,6 +343,12 @@
     </div>
     <input type="text" id="aiInput" placeholder="Ask about the project...">
     <button id="aiSend">Send</button>
+    <div id="photoViewer" style="display:none;">
+  <button id="closePhotoViewer">×</button>
+  <button id="zoomInPhoto">+</button>
+  <button id="zoomOutPhoto">−</button>
+  <img id="largePhoto" src="">
+</div>
   </div>
 
   <script type="module">
@@ -382,7 +454,7 @@
           ${
             photoPath
               ? `
-              <a href="${photoPath}" target="_blank">
+              <a href="#" onclick="openPhotoViewer('${photoPath}'); return false;">
                 <img
                   src="${photoPath}"
                   width="260"
@@ -785,7 +857,27 @@ function getBimFeatureHtml(feature) {
         section.style.display = "none";
       }
     }
+document.getElementById("mainMenuButton").addEventListener(
+  "click",
+  function () {
 
+    const menuContent =
+      document.getElementById("mainMenuContent");
+
+    if (
+      menuContent.style.display === "none" ||
+      menuContent.style.display === ""
+    ) {
+      menuContent.style.display = "block";
+      this.innerText = "✕ Close Menu";
+    }
+    else {
+      menuContent.style.display = "none";
+      this.innerText = "☰ Open Menu";
+    }
+
+  }
+);
     document.getElementById("toggleLayerMenu").addEventListener(
       "click",
       function () {
@@ -1147,6 +1239,111 @@ document.getElementById("openPointCloud").addEventListener(
       "https://urbanvis.hft-stuttgart.de/Testgebiete.html",
       "_blank"
     );
+  }
+);
+    let photoScale = 1;
+let photoX = 0;
+let photoY = 0;
+let isDraggingPhoto = false;
+let startX = 0;
+let startY = 0;
+
+window.openPhotoViewer = function(photoPath) {
+
+  const viewerDiv =
+    document.getElementById("photoViewer");
+
+  const img =
+    document.getElementById("largePhoto");
+
+  photoScale = 1;
+  photoX = 0;
+  photoY = 0;
+
+  img.src = photoPath;
+
+  img.style.transform =
+    `translate(-50%, -50%) translate(${photoX}px, ${photoY}px) scale(${photoScale})`;
+
+  viewerDiv.style.display = "block";
+};
+
+document.getElementById("closePhotoViewer").addEventListener(
+  "click",
+  function() {
+    document.getElementById("photoViewer").style.display = "none";
+  }
+);
+
+document.getElementById("zoomInPhoto").addEventListener(
+  "click",
+  function() {
+    photoScale += 0.2;
+    updatePhotoTransform();
+  }
+);
+
+document.getElementById("zoomOutPhoto").addEventListener(
+  "click",
+  function() {
+    photoScale = Math.max(0.4, photoScale - 0.2);
+    updatePhotoTransform();
+  }
+);
+
+function updatePhotoTransform() {
+  const img =
+    document.getElementById("largePhoto");
+
+  img.style.transform =
+    `translate(-50%, -50%) translate(${photoX}px, ${photoY}px) scale(${photoScale})`;
+}
+
+document.getElementById("largePhoto").addEventListener(
+  "mousedown",
+  function(e) {
+    isDraggingPhoto = true;
+    startX = e.clientX - photoX;
+    startY = e.clientY - photoY;
+    this.style.cursor = "grabbing";
+  }
+);
+
+document.addEventListener(
+  "mousemove",
+  function(e) {
+
+    if (!isDraggingPhoto) return;
+
+    photoX = e.clientX - startX;
+    photoY = e.clientY - startY;
+
+    updatePhotoTransform();
+  }
+);
+
+document.addEventListener(
+  "mouseup",
+  function() {
+    isDraggingPhoto = false;
+    document.getElementById("largePhoto").style.cursor = "grab";
+  }
+);
+
+document.getElementById("photoViewer").addEventListener(
+  "wheel",
+  function(e) {
+
+    e.preventDefault();
+
+    if (e.deltaY < 0) {
+      photoScale += 0.15;
+    }
+    else {
+      photoScale = Math.max(0.4, photoScale - 0.15);
+    }
+
+    updatePhotoTransform();
   }
 );
   </script>
