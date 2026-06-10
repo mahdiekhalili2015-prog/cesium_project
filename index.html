@@ -457,7 +457,7 @@
         <img
   src="${photoPath}"
   width="260"
-  onclick="window.parent.openPhotoViewer('${photoPath}')"
+  onclick="parent.postMessage({type:'openPhotoViewer', photoPath:'${photoPath}'}, '*')"
   style="
     border-radius:10px;
     margin-bottom:10px;
@@ -1345,6 +1345,11 @@ document.getElementById("photoViewer").addEventListener(
     updatePhotoTransform();
   }
 );
+    window.addEventListener("message", function(event) {
+  if (event.data && event.data.type === "openPhotoViewer") {
+    openPhotoViewer(event.data.photoPath);
+  }
+});
   </script>
 
 </body>
