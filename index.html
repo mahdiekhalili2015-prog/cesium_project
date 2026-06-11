@@ -582,9 +582,9 @@ function getBimFeatureHtml(feature) {
 
         leafletMap.fitBounds(leafletBuildingsLayer.getBounds());
 
-        Cesium.GeoJsonDataSource.load(data, {
-          clampToGround: true
-        })
+      Cesium.GeoJsonDataSource.load(data, {
+  clampToGround: false
+})
         .then(function(dataSource) {
 
           viewer.dataSources.add(dataSource);
@@ -619,11 +619,18 @@ function getBimFeatureHtml(feature) {
             const color = getCesiumColor(condition);
 
             e.polygon.material = color;
-            e.polygon.classificationType = Cesium.ClassificationType.CESIUM_3D_TILE;
+            e.polygon.classificationType = undefined;
             e.polygon.outline = true;
             e.polygon.outlineColor = Cesium.Color.WHITE.withAlpha(0.95);
-            e.polygon.height = undefined;
-            e.polygon.extrudedHeight = undefined;
+          e.polygon.height = 0;
+
+if (condition === "Good") {
+  e.polygon.extrudedHeight = 35;
+} else if (condition === "Medium") {
+  e.polygon.extrudedHeight = 28;
+} else if (condition === "Bad") {
+  e.polygon.extrudedHeight = 20;
+}
             e.originalColor = color;
 
             const propertiesForPopup = {
