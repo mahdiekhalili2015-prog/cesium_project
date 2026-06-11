@@ -312,7 +312,7 @@
       </label>
 
       <label>
-        <input type="checkbox" id="toggleRealistic" checked>
+       <input type="checkbox" id="toggleRealistic">
         Realistic 3D Model
       </label>
 
@@ -394,14 +394,8 @@
     viewer.scene.globe.enableLighting = true;
     viewer.scene.globe.depthTestAgainstTerrain = false;
 
-    try {
-      const realisticModel = await Cesium.createGooglePhotorealistic3DTileset();
-      viewer.scene.primitives.add(realisticModel);
-      realisticModelLayer = realisticModel;
-      console.log("Google Photorealistic 3D Tiles loaded");
-    } catch (error) {
-      console.error("Google Photorealistic 3D Tiles error:", error);
-    }
+   // Google Photorealistic 3D is OFF at the beginning.
+// It will load only when you click the checkbox.
 
     try {
       const bimModel = await Cesium.Cesium3DTileset.fromIonAssetId(4856693);
@@ -832,14 +826,29 @@ function getBimFeatureHtml(feature) {
       }
     );
 
-    document.getElementById("toggleRealistic").addEventListener(
-      "change",
-      function () {
-        if (realisticModelLayer) {
-          realisticModelLayer.show = this.checked;
+  document.getElementById("toggleRealistic").addEventListener(
+  "change",
+  async function () {
+    if (this.checked) {
+      if (!realisticModelLayer) {
+        try {
+          realisticModelLayer = await Cesium.createGooglePhotorealistic3DTileset();
+          viewer.scene.primitives.add(realisticModelLayer);
+          realisticModelLayer.show = true;
+        } catch (error) {
+          console.error("Google Photorealistic 3D Tiles error:", error);
+          this.checked = false;
         }
+      } else {
+        realisticModelLayer.show = true;
       }
-    );
+    } else {
+      if (realisticModelLayer) {
+        realisticModelLayer.show = false;
+      }
+    }
+  }
+);
 
     document.getElementById("toggleBIM").addEventListener(
       "change",
