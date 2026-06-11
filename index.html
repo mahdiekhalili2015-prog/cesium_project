@@ -818,7 +818,26 @@ if (condition === "Good") {
         }
       }
     );
+function updateBuildingDisplayMode(realisticOn) {
+  for (const e of cesiumEntities) {
+    if (!e.polygon) continue;
 
+    if (realisticOn) {
+      e.polygon.classificationType = Cesium.ClassificationType.CESIUM_3D_TILE;
+      e.polygon.height = undefined;
+      e.polygon.extrudedHeight = undefined;
+    } else {
+      e.polygon.classificationType = undefined;
+      e.polygon.height = 0;
+
+      const condition = getCesiumProperty(e, "condition");
+
+      if (condition === "Good") e.polygon.extrudedHeight = 35;
+      else if (condition === "Medium") e.polygon.extrudedHeight = 28;
+      else if (condition === "Bad") e.polygon.extrudedHeight = 20;
+    }
+  }
+}
     document.getElementById("toggleBuildings").addEventListener(
       "change",
       function () {
@@ -833,7 +852,7 @@ if (condition === "Good") {
       }
     );
 
-  document.getElementById("toggleRealistic").addEventListener(
+document.getElementById("toggleRealistic").addEventListener(
   "change",
   async function () {
     if (this.checked) {
@@ -842,17 +861,20 @@ if (condition === "Good") {
           realisticModelLayer = await Cesium.createGooglePhotorealistic3DTileset();
           viewer.scene.primitives.add(realisticModelLayer);
           realisticModelLayer.show = true;
+          updateBuildingDisplayMode(true);
         } catch (error) {
           console.error("Google Photorealistic 3D Tiles error:", error);
           this.checked = false;
         }
       } else {
         realisticModelLayer.show = true;
+        updateBuildingDisplayMode(true);
       }
     } else {
       if (realisticModelLayer) {
         realisticModelLayer.show = false;
       }
+      updateBuildingDisplayMode(false);
     }
   }
 );
