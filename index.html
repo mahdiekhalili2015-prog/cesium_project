@@ -563,22 +563,34 @@ function getBimFeatureHtml(feature) {
 
         geojsonData = data;
 
-        leafletBuildingsLayer = L.geoJSON(data, {
-          style: function(feature) {
-            const condition = feature.properties.condition;
+ leafletBuildingsLayer = L.geoJSON(data, {
 
-            return {
-              color: "#222222",
-              weight: 1,
-              fillColor: getConditionColor(condition),
-              fillOpacity: 0.60
-            };
-          },
+  filter: function(feature) {
+    const condition = feature.properties.condition;
 
-          onEachFeature: function(feature, layer) {
-            layer.bindPopup(getPopupHtml(feature.properties));
-          }
-        }).addTo(leafletMap);
+    return (
+      condition === "Good" ||
+      condition === "Medium" ||
+      condition === "Bad"
+    );
+  },
+
+  style: function(feature) {
+    const condition = feature.properties.condition;
+
+    return {
+      color: "#222222",
+      weight: 1,
+      fillColor: getConditionColor(condition),
+      fillOpacity: 0.60
+    };
+  },
+
+  onEachFeature: function(feature, layer) {
+    layer.bindPopup(getPopupHtml(feature.properties));
+  }
+
+}).addTo(leafletMap);
 
         leafletMap.fitBounds(leafletBuildingsLayer.getBounds());
 
